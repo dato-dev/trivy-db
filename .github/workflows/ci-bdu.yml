@@ -1,0 +1,28 @@
+name: CI (БДУ)
+
+# CI форка: проверяем источник БДУ ФСТЭК и агрегацию уязвимостей.
+# Upstream-workflow'ы Trivy перенесены в .github/workflows-upstream/ (не запускаются).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+      - name: go vet (БДУ)
+        run: go vet ./pkg/vulnsrc/bdu/... ./pkg/vulnsrc/vulnerability/...
+      - name: Тесты (БДУ + агрегация)
+        run: go test ./pkg/vulnsrc/bdu/... ./pkg/vulnsrc/vulnerability/...
+      - name: Сборка
+        run: go build ./...
