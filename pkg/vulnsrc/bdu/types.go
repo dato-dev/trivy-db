@@ -2,7 +2,7 @@ package bdu
 
 // Entry — запись БДУ ФСТЭК из выгрузки cmd/bdu-import (JSONL).
 // Поля соответствуют JSON-контракту пакета
-// github.com/dato-dev/trivy-fork-bdu-fstek/pkg/bdu.Entry.
+// github.com/dato-dev/rubezh/pkg/bdu.Entry.
 //
 // Структура намеренно дублируется здесь, чтобы источник trivy-db оставался
 // самодостаточным (как nvd.Cve и другие входные типы источников).
