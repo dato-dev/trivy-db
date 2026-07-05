@@ -7,6 +7,7 @@ import (
 	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/amazon"
 	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/aqua"
 	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/azure"
+	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/bdu"
 	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/bitnami"
 	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/bottlerocket"
 	"github.com/aquasecurity/trivy-db/pkg/vulnsrc/bundler"
@@ -82,5 +83,8 @@ var (
 		julia.NewVulnSrc(),
 
 		aqua.NewVulnSrc(),
+
+		// БДУ ФСТЭК России (обогащение CVE→BDU)
+		bdu.NewVulnSrc(),
 	}
 )
