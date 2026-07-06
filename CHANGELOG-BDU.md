@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/dato-dev/trivy-db/compare/v1.0.0...v1.0.1) (2026-07-06)
+
+
+### Bug Fixes
+
+* **db-build:** пушить тег 2 (версия схемы) — иначе rubezh не найдёт БД ([e2d4a42](https://github.com/dato-dev/trivy-db/commit/e2d4a42d739ee6ec73e8a011da0c4eaf50141b1e))
+
 ## 1.0.0 (2026-07-05)
 
 
