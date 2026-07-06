@@ -105,8 +105,9 @@ jobs:
         if: inputs.push != false
         run: |
           repo=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
-          version=$(date -u +%Y%m%d)
-          for tag in latest "$version"; do
+          # Тег "2" = версия схемы trivy-db: rubezh тянет БД по тегу :<SchemaVersion>.
+          # Обязателен, иначе `--db-repository ghcr.io/.../trivy-db` (тег :2) не найдёт БД.
+          for tag in 2 latest "$(date -u +%Y%m%d)"; do
             echo "Пуш ghcr.io/${repo}:${tag}"
             ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json \
               "ghcr.io/${repo}:${tag}" \
