@@ -62,7 +62,11 @@ jobs:
       - name: Сгенерировать fstec-bdu/bdu.jsonl из vulxml
         run: |
           mkdir -p cache/fstec-bdu
-          curl -sSL --retry 3 --retry-delay 5 -o vulxml.zip "$VULXML_URL"
+          # bdu.fstec.ru использует «Российский доверенный УЦ» (Минцифры), которого нет
+          # в стандартном trust store → verify по вложенному в репо CA-бандлу.
+          curl -fsSL --retry 3 --retry-delay 5 \
+            --cacert .github/certs/russian_trusted_ca.pem \
+            -o vulxml.zip "$VULXML_URL"
           ls -lh vulxml.zip
           go run "$BDU_IMPORT" -in vulxml.zip -out cache/fstec-bdu/bdu.jsonl
           echo "БДУ-записей: $(wc -l < cache/fstec-bdu/bdu.jsonl)"
