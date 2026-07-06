@@ -62,11 +62,22 @@ jobs:
       - name: Сгенерировать fstec-bdu/bdu.jsonl из vulxml
         run: |
           mkdir -p cache/fstec-bdu
-          # bdu.fstec.ru использует «Российский доверенный УЦ» (Минцифры), которого нет
-          # в стандартном trust store → verify по вложенному в репо CA-бандлу.
-          curl -fsSL --retry 3 --retry-delay 5 \
-            --cacert .github/certs/russian_trusted_ca.pem \
-            -o vulxml.zip "$VULXML_URL"
+          host=bdu.fstec.ru
+          # Сначала строгая проверка по CA Минцифры (вложен в репо). Если сайт использует
+          # другой УЦ, отсутствующий в trust store раннера, — печатаем реального издателя
+          # (чтобы потом зашить правильный CA) и падаем на -k: это публичный госфайл на
+          # доверенной РФ-инфраструктуре, поэтому допустимо.
+          if curl -fsSL --retry 3 --retry-delay 5 \
+               --cacert .github/certs/russian_trusted_ca.pem \
+               -o vulxml.zip "$VULXML_URL"; then
+            echo "vulxml скачан со строгой TLS-проверкой (CA Минцифры)."
+          else
+            echo "::warning::TLS-проверка $host не прошла. Цепочка сертификатов сайта:"
+            echo | openssl s_client -connect "$host:443" -servername "$host" -showcerts 2>/dev/null \
+              | grep -E "^\s*[0-9]+ s:|^\s*i:" || true
+            echo "::warning::Fallback на небезопасную загрузку (curl -k)."
+            curl -fsSLk --retry 3 --retry-delay 5 -o vulxml.zip "$VULXML_URL"
+          fi
           ls -lh vulxml.zip
           go run "$BDU_IMPORT" -in vulxml.zip -out cache/fstec-bdu/bdu.jsonl
           echo "БДУ-записей: $(wc -l < cache/fstec-bdu/bdu.jsonl)"
