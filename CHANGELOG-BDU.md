@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.2](https://github.com/dato-dev/trivy-db/compare/v1.0.1...v1.0.2) (2026-07-06)
+
+
+### Bug Fixes
+
+* **db-build:** verify bdu.fstec.ru по CA Минцифры (Russian Trusted CA) ([27bf3ac](https://github.com/dato-dev/trivy-db/commit/27bf3ac1bffd6d5cb7d415d29c28229d9fa8364c))
+
 ## [1.0.1](https://github.com/dato-dev/trivy-db/compare/v1.0.0...v1.0.1) (2026-07-06)
 
 
