@@ -1,0 +1,115 @@
+name: Build DB (БДУ)
+
+# Собирает trivy-db с данными БДУ ФСТЭК и публикует как OCI-артефакт в ghcr.io.
+# Запускается на self-hosted раннере (в РФ) — оттуда надёжно качается vulxml с
+# bdu.fstec.ru, а данные не уходят наружу.
+#
+# БЕЗОПАСНОСТЬ: только workflow_dispatch и schedule — НЕТ pull_request, чтобы
+# сторонний fork не мог выполнить код на self-hosted раннере.
+
+on:
+  workflow_dispatch:
+    inputs:
+      push:
+        description: "Публиковать БД в ghcr.io (иначе только собрать)"
+        type: boolean
+        default: true
+  schedule:
+    - cron: "0 3 * * *" # ежедневно 03:00 UTC
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: db-build
+  cancel-in-progress: false
+
+env:
+  VULXML_URL: https://bdu.fstec.ru/files/documents/vulxml.zip
+  BDU_IMPORT: github.com/dato-dev/rubezh/cmd/bdu-import@latest
+
+jobs:
+  build:
+    name: Build DB with БДУ
+    runs-on: [self-hosted, Linux, X64]
+    timeout-minutes: 240
+    steps:
+      - name: Preflight — проверка инструментов
+        run: |
+          missing=""
+          for t in make git wget tar curl go; do
+            command -v "$t" >/dev/null 2>&1 || missing="$missing $t"
+          done
+          if [ -n "$missing" ]; then
+            echo "На раннере не хватает:$missing"; exit 1
+          fi
+          echo "go: $(go version)"
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: false
+
+      - name: Установить bbolt (для db-compact)
+        run: go install go.etcd.io/bbolt/cmd/bbolt@v1.3.5
+
+      - name: Очистить прошлую сборку
+        run: rm -rf cache out assets db.tar.gz vulxml.zip
+
+      - name: Сгенерировать fstec-bdu/bdu.jsonl из vulxml
+        run: |
+          mkdir -p cache/fstec-bdu
+          curl -sSL --retry 3 --retry-delay 5 -o vulxml.zip "$VULXML_URL"
+          ls -lh vulxml.zip
+          go run "$BDU_IMPORT" -in vulxml.zip -out cache/fstec-bdu/bdu.jsonl
+          echo "БДУ-записей: $(wc -l < cache/fstec-bdu/bdu.jsonl)"
+
+      - name: Скачать vuln-list и advisory-источники
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: make db-fetch-langs db-fetch-vuln-list
+
+      - name: Собрать билдер
+        run: make build
+
+      - name: Собрать БД (все источники + fstec-bdu)
+        run: make db-build
+
+      - name: Компакт БД
+        run: make db-compact
+
+      - name: Сжать ассеты (db.tar.gz)
+        run: make db-compress
+
+      - name: Переместить db.tar.gz в корень
+        run: mv assets/db.tar.gz .
+
+      - name: Логин в ghcr.io
+        if: inputs.push != false
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Установить oras
+        if: inputs.push != false
+        run: |
+          curl -sSLO https://github.com/oras-project/oras/releases/download/v1.2.0/oras_1.2.0_linux_amd64.tar.gz
+          tar -xzf oras_1.2.0_linux_amd64.tar.gz oras
+
+      - name: Опубликовать БД как OCI-артефакт
+        if: inputs.push != false
+        run: |
+          repo=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          version=$(date -u +%Y%m%d)
+          for tag in latest "$version"; do
+            echo "Пуш ghcr.io/${repo}:${tag}"
+            ./oras push --artifact-type application/vnd.aquasec.trivy.config.v1+json \
+              "ghcr.io/${repo}:${tag}" \
+              db.tar.gz:application/vnd.aquasec.trivy.db.layer.v1.tar+gzip
+          done
+          echo "Готово. rubezh: --db-repository ghcr.io/${repo}"
