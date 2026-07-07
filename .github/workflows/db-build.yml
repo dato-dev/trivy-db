@@ -102,14 +102,6 @@ jobs:
       - name: Переместить db.tar.gz в корень
         run: mv assets/db.tar.gz .
 
-      - name: Логин в ghcr.io
-        if: inputs.push != false
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
       - name: Установить oras
         if: inputs.push != false
         run: |
@@ -118,7 +110,12 @@ jobs:
 
       - name: Опубликовать БД как OCI-артефакт
         if: inputs.push != false
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          # Логин через oras (docker на раннере не нужен).
+          echo "$GHCR_TOKEN" | ./oras login ghcr.io \
+            --username "${{ github.actor }}" --password-stdin
           repo=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
           # Тег "2" = версия схемы trivy-db: rubezh тянет БД по тегу :<SchemaVersion>.
           # Обязателен, иначе `--db-repository ghcr.io/.../trivy-db` (тег :2) не найдёт БД.
