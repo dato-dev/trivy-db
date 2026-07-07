@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.0.3](https://github.com/dato-dev/trivy-db/compare/v1.0.2...v1.0.3) (2026-07-07)
+
+
+### Bug Fixes
+
+* **db-build:** fallback на -k при загрузке vulxml + диагностика цепочки ([87aadad](https://github.com/dato-dev/trivy-db/commit/87aadadd5dea76fe449f99353629141e7c78dbe6))
+* **db-build:** логин в ghcr через oras, без docker ([3348559](https://github.com/dato-dev/trivy-db/commit/3348559097a9380897c814d509c82e113f1defc0))
+
 ## [1.0.2](https://github.com/dato-dev/trivy-db/compare/v1.0.1...v1.0.2) (2026-07-06)
 
 
